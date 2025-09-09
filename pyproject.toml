@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "youtube-scanner"
+version = "0.1.0"
+description = "Tools for scanning YouTube channels and mapping Shorts to long-form videos"
+authors = [{name = "Your Name", email = "you@example.com"}]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+dependencies = [
+    "google-api-python-client",
+    "yt-dlp",
+    "youtube-transcript-api",
+    "requests",
+    "pytz",
+    "APScheduler",
+    "python-dotenv"
+]
+[project.optional-dependencies]
+test = ["pytest"]
+[tool.setuptools]
+packages = []

@@ -1,0 +1,9 @@
+google-api-python-client
+yt-dlp
+youtube-transcript-api
+requests
+pytz
+APScheduler
+pytest
+python-dotenv
+requests>=2.0
