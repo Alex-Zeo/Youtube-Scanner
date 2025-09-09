@@ -6,3 +6,4 @@ pytz
 APScheduler
 pytest
 python-dotenv
+requests>=2.0
