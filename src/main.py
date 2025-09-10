@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from youtube_scanner.channel_fetcher import fetch_uploads
 from youtube_scanner.video_classifier import classify_video
 from youtube_scanner.metadata_collector import collect_metadata
-from youtube_scanner.shorts_mapper import map_shorts_to_full
+from youtube_scanner.short_mapper import map_shorts_to_full
 from youtube_scanner.transcript_fetcher import fetch_transcript
 from youtube_scanner.scheduler import schedule_monthly
 from youtube_scanner.storage import save_results
