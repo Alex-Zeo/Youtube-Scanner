@@ -1,6 +1,6 @@
 """Map Shorts to full videos via descriptions, comments, search, and transcripts."""
 
-from typing import Dict, List
+from typing import Dict, Iterable, List, Optional
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -11,6 +11,17 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 logger.setLevel(logging.INFO)
+
+
+def map_short_to_long(short: Dict[str, str], videos: Iterable[Dict[str, str]]) -> Optional[Dict[str, str]]:
+    """Map a single short to a matching long-form video by title."""
+    logger.info("Mapping short %s", short.get("id"))
+    short_title = short.get("title", "").lower()
+    for video in videos:
+        if video.get("title", "").lower() == short_title:
+            return video
+    return None
+
 
 def map_shorts_to_full(shorts: List[str], full_videos: List[str]) -> Dict[str, str]:
     """Placeholder for mapping shorts to full videos."""
