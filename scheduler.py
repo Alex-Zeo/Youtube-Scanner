@@ -1,17 +1,22 @@
 import logging
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
+from typing import List
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import channel_fetcher
 import storage
 
+sys.path.append(str(Path(__file__).resolve().parent / "src"))
+from youtube_scanner.logging_config import setup_logging  # noqa: E402
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 # List of YouTube channel IDs to scan
-CHANNELS = []  # Populate with real channel IDs
+CHANNELS: List[str] = []  # Populate with real channel IDs
 
 
 def run_channel_scan() -> None:
@@ -38,6 +43,7 @@ def start() -> BackgroundScheduler:
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution only
+    setup_logging()
     sched = start()
     try:
         while True:

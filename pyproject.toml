@@ -23,3 +23,5 @@ dependencies = [
 test = ["pytest"]
 [tool.setuptools]
 packages = []
+[tool.mypy]
+exclude = ["^main\\.py$"]

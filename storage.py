@@ -4,6 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
+logger = logging.getLogger(__name__)
+
 # File used to persist last run timestamps per channel
 _STORAGE_FILE = Path("last_run.json")
 
@@ -14,9 +16,14 @@ def _load_data() -> Dict[str, datetime]:
         try:
             with _STORAGE_FILE.open("r", encoding="utf-8") as fh:
                 data = json.load(fh)
-            return {key: datetime.fromisoformat(value) for key, value in data.items()}
+            # fmt: off
+            return {
+                key: datetime.fromisoformat(value)
+                for key, value in data.items()
+            }
+            # fmt: on
         except Exception as exc:  # pragma: no cover - logging only
-            logging.error("Failed to load last run timestamps: %s", exc)
+            logger.error("Failed to load last run timestamps: %s", exc)
     return {}
 
 
@@ -26,9 +33,9 @@ def _save_data(data: Dict[str, datetime]) -> None:
     try:
         with _STORAGE_FILE.open("w", encoding="utf-8") as fh:
             json.dump(serialised, fh)
-        logging.info("Persisted last run timestamps")
+        logger.info("Persisted last run timestamps")
     except Exception as exc:  # pragma: no cover - logging only
-        logging.error("Failed to persist last run timestamps: %s", exc)
+        logger.error("Failed to persist last run timestamps: %s", exc)
 
 
 def get_last_run(channel_id: str) -> Optional[datetime]:

@@ -1,48 +1,29 @@
 import logging
-import logging.config
-from youtube_api import fetch_video_data
-from process_utils import run_command
+import sys
+from pathlib import Path
 
-LOGGING_CONFIG = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'standard': {
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'level': 'INFO',
-            'formatter': 'standard',
-            'stream': 'ext://sys.stdout'
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'level': 'DEBUG',
-            'formatter': 'standard',
-            'filename': 'app.log',
-            'encoding': 'utf8'
-        },
-    },
-    'root': {
-        'level': 'DEBUG',
-        'handlers': ['console', 'file']
-    }
-}
+from process_utils import run_command
+from youtube_api import fetch_video_data
+
+sys.path.append(str(Path(__file__).resolve().parent / "src"))
+from youtube_scanner.logging_config import setup_logging  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
 
 def main():
-    logging.config.dictConfig(LOGGING_CONFIG)
+    setup_logging()
+    logger.info("Demo starting")
     try:
-        fetch_video_data('dQw4w9WgXcQ', 'INVALID_API_KEY')
-    except Exception:
-        pass
+        fetch_video_data("dQw4w9WgXcQ", "INVALID_API_KEY")
+    except Exception as exc:
+        logger.error("Failed to fetch video data: %s", exc)
 
     try:
-        run_command(['echo', 'Hello'])
-    except Exception:
-        pass
+        run_command(["echo", "Hello"])
+    except Exception as exc:
+        logger.error("Command execution failed: %s", exc)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
