@@ -1,4 +1,4 @@
-# Enterprise-Grade Plan for Parsing YouTube Shorts & Long-Form Video Links
+# Youtube Scanner: Enterprise-Grade Plan for Parsing YouTube Shorts & Long-Form Video Links
 
 ## Usage
 

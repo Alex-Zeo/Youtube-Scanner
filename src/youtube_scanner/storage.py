@@ -1,20 +1,20 @@
-"""Persist results using JSON or a database."""
+"""Persistence helpers for VideoMetadata and ShortMapping.
 
-import json
-from typing import Any
-import logging
-from logging.handlers import RotatingFileHandler
+This module simply re-exports the storage helpers from the top-level
+``youtube_scanner.storage`` package.  It exists for backward compatibility with
+older imports that referenced ``src.youtube_scanner.storage``.
+"""
 
-logger = logging.getLogger(__name__)
-if not logger.handlers:
-    handler = RotatingFileHandler("youtube_scanner.log", maxBytes=1_000_000, backupCount=3)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+from youtube_scanner.storage import (
+    append_short_mappings,
+    append_video_metadata,
+    load_short_mappings,
+    load_video_metadata,
+)
 
-def save_results(data: Any, filename: str = "results.json") -> None:
-    """Persist data to a JSON file."""
-    logger.info("Saving results to %s", filename)
-    with open(filename, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, ensure_ascii=False, indent=2)
+__all__ = [
+    "append_short_mappings",
+    "append_video_metadata",
+    "load_short_mappings",
+    "load_video_metadata",
+]
