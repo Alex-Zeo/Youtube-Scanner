@@ -1,35 +1,41 @@
 # Architecture Overview
 
-This document outlines the main modules and data flow of the YouTube Scanner system.
+This document outlines the modules that make up the YouTube Scanner and how they work together.
 
-## Module Responsibilities
+## Module Layout
 
-- **Channel Scanning**: Enumerates configured channels and retrieves video identifiers. Logs channel progress and any API failures.
-- **Classification**: Distinguishes Shorts from long-form videos using duration and URL patterns. Records classification decisions and flags anomalies.
-- **Metadata Collection**: Gathers detailed statistics, descriptions and transcripts for target videos. Errors retrieving metadata are logged for retry.
-- **Short-to-Long Mapping**: Links Shorts to corresponding long-form videos via description links, comments and transcript matching. Mapping results and mismatches are logged.
-- **Storage**: Persists metadata and mapping results to structured storage such as a database or file system. Failed writes are reported upstream.
-- **Scheduler**: Orchestrates periodic scans and updates. Aggregates logs from all modules and handles retry or alerting on errors.
+- `youtube_scanner.channel_fetcher` – retrieves videos for a channel via the YouTube Data API.
+- `youtube_api` – requests detailed metadata for individual videos.
+- `youtube_scanner.video_classifier` – labels each video as a Short or long-form item.
+- `youtube_scanner.short_mapper` – attempts to pair Shorts with matching long-form videos.
+- `storage` – stores run metadata such as the last time a channel was scanned.
+- `scheduler` – triggers periodic scans and coordinates retries.
+
+## Workflow
+
+1. `scheduler` invokes `channel_fetcher` for each configured channel.
+2. For every video ID returned, `youtube_api` gathers metadata used by `video_classifier` to detect Shorts.
+3. `short_mapper` tries to link each Short to a long-form counterpart.
+4. Results and timestamps are persisted via `storage`.
 
 ## Data Flow
 
 ```mermaid
 graph LR
-    A[Channel Scanning] --> B[Classification]
-    B --> C[Metadata Collection]
-    C --> D[Short-to-Long Mapping]
-    D --> E[Storage]
-    E --> F[Scheduler]
+    A[channel_fetcher] --> B[youtube_api]
+    B --> C[video_classifier]
+    C --> D[short_mapper]
+    D --> E[storage]
 ```
 
 ## Logging and Error Handling
 
-Logging is centralized so each module emits structured entries that trace the pipeline. Error handling follows the data flow: a module logs the issue, returns contextual information, and the scheduler decides on retries or alerts.
+Logging is centralized so each module emits structured entries that trace the pipeline. The scheduler reviews errors and decides whether to retry or surface alerts.
 
-- Channel scanning logs unavailable channels or quota errors and continues with the next target.
-- Classification logs invalid or missing durations and marks videos for review.
-- Metadata collection logs API failures and records placeholders until data can be refreshed.
-- Mapping logs unresolved Shorts, which remain in storage with a "no match" status.
-- Storage logs write failures and surfaces them to the scheduler.
-- Scheduler summarizes errors across modules and schedules follow-up jobs or notifications.
+- `channel_fetcher` logs unavailable channels or quota errors and continues with the next target.
+- `video_classifier` logs invalid or missing durations and marks videos for review.
+- `youtube_api` logs API failures and records placeholders until data can be refreshed.
+- `short_mapper` logs unresolved Shorts, which remain in storage with a "no match" status.
+- `storage` logs write failures and surfaces them to the scheduler.
+- `scheduler` summarizes errors across modules and schedules follow-up jobs or notifications.
 

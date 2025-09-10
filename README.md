@@ -1,5 +1,19 @@
-Enterprise-Grade Plan for Parsing YouTube Shorts & Long-Form Video Links
-Key Objectives & Requirements
+# Enterprise-Grade Plan for Parsing YouTube Shorts & Long-Form Video Links
+
+## Usage
+
+1. Install dependencies with `pip install -r requirements.txt`.
+2. Copy `.env.example` to `.env` and provide values for `YOUTUBE_API_KEY` and `DATABASE_PATH`.
+3. Run `python scheduler.py` to start the monthly scan or call `python channel_fetcher.py` for a one-off fetch.
+
+### Configuration file format
+
+```
+YOUTUBE_API_KEY=your_api_key_here
+DATABASE_PATH=/path/to/database.db
+```
+
+## Key Objectives & Requirements
 
 Use Open & Public Tools: The solution will utilize public APIs (e.g. YouTube Data API) and open-source libraries (such as youtube-dl/yt-dlp or similar) to gather data, avoiding proprietary systems. This ensures transparency and reproducibility.
 
