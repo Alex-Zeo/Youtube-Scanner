@@ -1,79 +1,56 @@
-from datetime import datetime, timezone
-from typing import Any
+import requests
+from unittest.mock import Mock, patch
 
-import youtube_api
-from youtube_scanner.models import VideoMetadata
-
-
-class MockResponse:
-    def __init__(self, payload: dict[str, Any]):
-        self._payload = payload
-
-    def raise_for_status(self):
-        pass
-
-    def json(self):
-        return self._payload
+from youtube_api import fetch_uploads_playlist_video_ids
 
 
-def test_fetch_video_data_parses_response(monkeypatch):
-    payload = {
-        "items": [
-            {
-                "id": "abc123",
-                "snippet": {
-                    "title": "My Video",
-                    "description": "Desc",
-                    "publishedAt": "2024-01-01T00:00:00Z",
-                },
-                "contentDetails": {"duration": "PT1M5S"},
-                "statistics": {
-                    "viewCount": "100",
-                    "likeCount": "5",
-                    "commentCount": "2",
-                },
-            }
-        ]
+def test_fetch_uploads_playlist_video_ids_handles_pagination():
+    channel_resp = Mock()
+    channel_resp.json.return_value = {
+        "items": [{"contentDetails": {"relatedPlaylists": {"uploads": "UPLOADS_ID"}}}]
     }
+    channel_resp.raise_for_status.return_value = None
 
-    def fake_get(url: str, params: dict[str, Any], timeout: int):
-        return MockResponse(payload)
-
-    monkeypatch.setattr(youtube_api.requests, "get", fake_get)
-
-    metadata = youtube_api.fetch_video_data("abc123", "KEY")
-    assert isinstance(metadata, VideoMetadata)
-    assert metadata.title == "My Video"
-    assert metadata.description == "Desc"
-    expected_date = datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
-    assert metadata.publish_date == expected_date
-    assert metadata.duration == 65
-    assert metadata.view_count == 100
-    assert metadata.like_count == 5
-    assert metadata.comment_count == 2
-
-
-def test_fetch_video_data_missing_fields(monkeypatch, caplog):
-    payload = {
+    first_page = Mock()
+    first_page.json.return_value = {
         "items": [
-            {
-                "id": "abc123",
-                "snippet": {},
-                "statistics": {},
-                "contentDetails": {},
-            }
-        ]
+            {"contentDetails": {"videoId": "id1"}},
+            {"contentDetails": {"videoId": "id2"}},
+        ],
+        "nextPageToken": "TOKEN",
     }
+    first_page.raise_for_status.return_value = None
 
-    def fake_get(url: str, params: dict[str, Any], timeout: int):
-        return MockResponse(payload)
+    second_page = Mock()
+    second_page.json.return_value = {
+        "items": [{"contentDetails": {"videoId": "id3"}}]
+    }
+    second_page.raise_for_status.return_value = None
 
-    monkeypatch.setattr(youtube_api.requests, "get", fake_get)
+    with patch("youtube_api.requests.get", side_effect=[channel_resp, first_page, second_page]):
+        result = fetch_uploads_playlist_video_ids("CHANNEL", "KEY")
 
-    with caplog.at_level("WARNING"):
-        metadata = youtube_api.fetch_video_data("abc123", "KEY")
+    assert result == ["id1", "id2", "id3"]
 
-    assert isinstance(metadata, VideoMetadata)
-    assert metadata.title == ""
-    assert metadata.publish_date is None
-    assert "Missing field title" in caplog.text
+
+def test_fetch_uploads_playlist_video_ids_quota_exceeded(caplog):
+    resp = Mock()
+    resp.status_code = 403
+    resp.json.return_value = {"error": {"errors": [{"reason": "quotaExceeded"}]}}
+    resp.raise_for_status.side_effect = requests.exceptions.HTTPError(response=resp)
+
+    with patch("youtube_api.requests.get", return_value=resp):
+        with caplog.at_level("ERROR"):
+            result = fetch_uploads_playlist_video_ids("CHANNEL", "KEY")
+
+    assert result == []
+    assert "quota exceeded" in caplog.text.lower()
+
+
+def test_fetch_uploads_playlist_video_ids_network_issue(caplog):
+    with patch("youtube_api.requests.get", side_effect=requests.exceptions.RequestException("boom")):
+        with caplog.at_level("WARNING"):
+            result = fetch_uploads_playlist_video_ids("CHANNEL", "KEY")
+
+    assert result == []
+    assert "network issue" in caplog.text.lower()
