@@ -1,8 +1,10 @@
 """Fetch uploads using the YouTube Data API."""
 
-from typing import List
+from typing import Dict, List, Any
 import logging
 from logging.handlers import RotatingFileHandler
+
+import requests
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -12,8 +14,38 @@ if not logger.handlers:
     logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+API_URL = "https://www.googleapis.com/youtube/v3/search"
+
+
+def fetch_channel_videos(api_key: str, channel_id: str) -> Dict[str, Any]:
+    """Fetch videos for a channel using the YouTube Data API.
+
+    Parameters
+    ----------
+    api_key:
+        API key used for authenticating with the YouTube Data API.
+    channel_id:
+        Identifier of the YouTube channel whose videos should be fetched.
+
+    Returns
+    -------
+    dict
+        JSON response from the API containing video information.
+    """
+    logger.info("Fetching channel videos for %s", channel_id)
+    params = {
+        "part": "snippet",
+        "channelId": channel_id,
+        "maxResults": 50,
+        "order": "date",
+        "key": api_key,
+    }
+    response = requests.get(API_URL, params=params, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
 def fetch_uploads(channel_id: str) -> List[str]:
-    """Placeholder for fetching upload video IDs from a channel."""
+    """Placeholder retained for backward compatibility."""
     logger.info("Fetching uploads for channel %s", channel_id)
-    # TODO: Implement YouTube Data API calls here
     return []
