@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install Python dependencies
-pip install -r requirements.txt
+# Install the project with development dependencies
+pip install -e .[dev]

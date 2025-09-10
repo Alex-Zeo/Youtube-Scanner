@@ -1,3 +1,13 @@
+# Youtube Scanner
+
+## Installation
+
+Install the project with development dependencies:
+
+```bash
+pip install -e .[dev]
+```
+
 Enterprise-Grade Plan for Parsing YouTube Shorts & Long-Form Video Links
 Key Objectives & Requirements
 
