@@ -1,9 +1,11 @@
+# Runtime dependencies
 google-api-python-client
 yt-dlp
 youtube-transcript-api
-requests
+requests>=2.0
 pytz
 APScheduler
-pytest
 python-dotenv
-requests>=2.0
+
+# Development dependencies
+pytest

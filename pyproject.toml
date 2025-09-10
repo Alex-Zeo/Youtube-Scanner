@@ -14,12 +14,24 @@ dependencies = [
     "google-api-python-client",
     "yt-dlp",
     "youtube-transcript-api",
-    "requests",
+    "requests>=2.0",
     "pytz",
     "APScheduler",
     "python-dotenv"
 ]
 [project.optional-dependencies]
-test = ["pytest"]
-[tool.setuptools]
-packages = []
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pre-commit",
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["youtube_scanner"]
