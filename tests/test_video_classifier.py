@@ -1,8 +1,8 @@
-from youtube_scanner.video_classifier import is_short
+from youtube_scanner.video_classifier import classify_video
 
 
-def test_is_short_classifies_videos_correctly(caplog):
-    with caplog.at_level("DEBUG"):
-        assert is_short({"duration": 30})
-        assert not is_short({"duration": 120})
-    assert "Classifying video with duration 30" in caplog.text
+def test_classify_video_labels_videos_correctly(caplog):
+    with caplog.at_level("INFO"):
+        assert classify_video(30) == "short"
+        assert classify_video(120) == "long"
+    assert "Classified duration 30 as short" in caplog.text
