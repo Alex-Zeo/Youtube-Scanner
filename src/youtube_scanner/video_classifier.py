@@ -20,6 +20,11 @@ def classify_video(duration_seconds: int) -> str:
     return classification
 
 
+def classify_duration(duration: int) -> str:
+    """Return ``"short"`` or ``"long"``; kept for callers of the root-tree API."""
+    return classify_video(duration)
+
+
 def is_short(video_info: Dict[str, int]) -> bool:
     """Return ``True`` if the video should be classified as a YouTube Short."""
     duration = video_info.get("duration", 0)
