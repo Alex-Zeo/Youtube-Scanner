@@ -7,9 +7,10 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled]
 
 concurrency:
-  group: ${{ (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)) && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, github.run_id) || format('{0}-pr-skip-{1}', github.workflow, github.ref) }}
+  group: ${{ (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'promote') && (github.event.action != 'labeled' || github.event.label.name == 'promote') && github.event.pull_request.head.repo.full_name == github.repository)) && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, github.run_id) || format('{0}-pr-skip-{1}', github.workflow, github.ref) }}
   cancel-in-progress: false
 
 permissions:
@@ -17,7 +18,7 @@ permissions:
 
 jobs:
   test:
-    if: ${{ (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    if: ${{ (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'promote') && (github.event.action != 'labeled' || github.event.label.name == 'promote') && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
