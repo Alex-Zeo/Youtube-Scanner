@@ -1,12 +1,23 @@
 name: Tests
 
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: '47 6 * * *'
+    - cron: '47 18 * * *'
+  workflow_dispatch:
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)) && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, github.run_id) || format('{0}-pr-skip-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   test:
+    if: ${{ (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
