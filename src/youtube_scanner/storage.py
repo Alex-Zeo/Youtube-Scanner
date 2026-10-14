@@ -9,14 +9,14 @@ chosen based on the file extension: ``.json`` for JSON files and ``.sqlite`` or
 
 from __future__ import annotations
 
-from contextlib import closing
-from datetime import datetime
 import json
 import logging
 import os
 import sqlite3
 import stat
 import uuid
+from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -56,7 +56,8 @@ _SHORT_MAPPINGS_TABLE = """
 
 
 def _staging_path(target: Path) -> Path:
-    return target.with_name(f".{target.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    suffix = f"{os.getpid()}.{uuid.uuid4().hex}.tmp"
+    return target.with_name(f".{target.name}.{suffix}")
 
 
 def _write_json_atomically(filename: str | Path, payload: Any) -> None:
@@ -77,25 +78,31 @@ def _write_json_atomically(filename: str | Path, payload: Any) -> None:
         raise
 
 
-def _insert_sqlite_rows(path: Path, table_sql: str, insert_sql: str, rows: List[tuple]) -> None:
+def _insert_sqlite_rows(
+    path: Path, table_sql: str, insert_sql: str, rows: List[tuple]
+) -> None:
     with closing(sqlite3.connect(path)) as conn:
         with conn:
             conn.execute(table_sql)
             conn.executemany(insert_sql, rows)
 
 
-def _append_sqlite_rows(filename: str | Path, table_sql: str, insert_sql: str, rows: List[tuple]) -> None:
+def _append_sqlite_rows(
+    filename: str | Path, table_sql: str, insert_sql: str, rows: List[tuple]
+) -> None:
     target = Path(os.path.realpath(filename))
-    if target.exists():
-        _insert_sqlite_rows(target, table_sql, insert_sql, rows)
-        return
-    staging = _staging_path(target)
-    try:
-        _insert_sqlite_rows(staging, table_sql, insert_sql, rows)
-        os.replace(staging, target)
-    except BaseException:
-        staging.unlink(missing_ok=True)
-        raise
+    if not target.exists():
+        staging = _staging_path(target)
+        try:
+            _insert_sqlite_rows(staging, table_sql, insert_sql, rows)
+            try:
+                os.link(staging, target)
+                return
+            except FileExistsError:
+                pass
+        finally:
+            staging.unlink(missing_ok=True)
+    _insert_sqlite_rows(target, table_sql, insert_sql, rows)
 
 
 # ---------------------------------------------------------------------------
