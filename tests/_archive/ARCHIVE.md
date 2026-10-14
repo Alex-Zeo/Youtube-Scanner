@@ -4,3 +4,5 @@ Tests in this directory are kept out of pytest collection by `collect_ignore = [
 
 | Test id | Original file:line | Reason | Restore |
 |---|---|---|---|
+| `tests/test_short_mapper.py::test_map_short_to_long` | tests/test_short_mapper.py:4 | Judge B ruling, accepted row (weight 1): map_short_to_long (src/youtube_scanner/short_mapper.py:16-23) has no call site on main or on PR 21; src/main.py:38 calls the different map_shorts_to_full. | `git mv tests/_archive/test_short_mapper.py tests/test_short_mapper.py` |
+| `tests/test_short_mapper.py::test_map_short_to_long_no_match` | tests/test_short_mapper.py:16 | Judge B ruling, accepted row (weight 1): same function and trace as the match row, no caller in either tree. | `git mv tests/_archive/test_short_mapper.py tests/test_short_mapper.py` |
