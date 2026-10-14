@@ -9,11 +9,14 @@ chosen based on the file extension: ``.json`` for JSON files and ``.sqlite`` or
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from contextlib import closing
 from datetime import datetime
 import json
 import logging
+import os
 import sqlite3
+import stat
+import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -29,6 +32,72 @@ def _is_sqlite(path: Path) -> bool:
     return path.suffix in {".sqlite", ".db"}
 
 
+_VIDEO_METADATA_TABLE = """
+    CREATE TABLE IF NOT EXISTS video_metadata (
+        video_id TEXT PRIMARY KEY,
+        title TEXT,
+        description TEXT,
+        publish_date TEXT,
+        view_count INTEGER,
+        like_count INTEGER,
+        comment_count INTEGER,
+        duration INTEGER,
+        is_short INTEGER
+    )
+"""
+
+_SHORT_MAPPINGS_TABLE = """
+    CREATE TABLE IF NOT EXISTS short_mappings (
+        short_video_id TEXT PRIMARY KEY,
+        full_video_id TEXT,
+        relation_source TEXT
+    )
+"""
+
+
+def _staging_path(target: Path) -> Path:
+    return target.with_name(f".{target.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+
+
+def _write_json_atomically(filename: str | Path, payload: Any) -> None:
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    target = Path(os.path.realpath(filename))
+    staging = _staging_path(target)
+    fd = os.open(staging, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        if target.exists():
+            os.chmod(staging, stat.S_IMODE(target.stat().st_mode))
+        os.replace(staging, target)
+    except BaseException:
+        staging.unlink(missing_ok=True)
+        raise
+
+
+def _insert_sqlite_rows(path: Path, table_sql: str, insert_sql: str, rows: List[tuple]) -> None:
+    with closing(sqlite3.connect(path)) as conn:
+        with conn:
+            conn.execute(table_sql)
+            conn.executemany(insert_sql, rows)
+
+
+def _append_sqlite_rows(filename: str | Path, table_sql: str, insert_sql: str, rows: List[tuple]) -> None:
+    target = Path(os.path.realpath(filename))
+    if target.exists():
+        _insert_sqlite_rows(target, table_sql, insert_sql, rows)
+        return
+    staging = _staging_path(target)
+    try:
+        _insert_sqlite_rows(staging, table_sql, insert_sql, rows)
+        os.replace(staging, target)
+    except BaseException:
+        staging.unlink(missing_ok=True)
+        raise
+
+
 # ---------------------------------------------------------------------------
 # Video metadata
 # ---------------------------------------------------------------------------
@@ -38,21 +107,7 @@ def load_video_metadata(filename: str | Path) -> List[VideoMetadata]:
     path = Path(filename)
     if _is_sqlite(path):
         conn = sqlite3.connect(path)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS video_metadata (
-                video_id TEXT PRIMARY KEY,
-                title TEXT,
-                description TEXT,
-                publish_date TEXT,
-                view_count INTEGER,
-                like_count INTEGER,
-                comment_count INTEGER,
-                duration INTEGER,
-                is_short INTEGER
-            )
-            """
-        )
+        conn.execute(_VIDEO_METADATA_TABLE)
         rows = conn.execute(
             "SELECT video_id, title, description, publish_date, view_count, like_count, comment_count, duration, is_short FROM video_metadata"
         ).fetchall()
@@ -87,22 +142,6 @@ def append_video_metadata(records: Iterable[VideoMetadata], filename: str | Path
     """Append ``records`` to the video metadata collection at ``filename``."""
     path = Path(filename)
     if _is_sqlite(path):
-        conn = sqlite3.connect(path)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS video_metadata (
-                video_id TEXT PRIMARY KEY,
-                title TEXT,
-                description TEXT,
-                publish_date TEXT,
-                view_count INTEGER,
-                like_count INTEGER,
-                comment_count INTEGER,
-                duration INTEGER,
-                is_short INTEGER
-            )
-            """
-        )
         data = [
             (
                 r.video_id,
@@ -117,18 +156,17 @@ def append_video_metadata(records: Iterable[VideoMetadata], filename: str | Path
             )
             for r in records
         ]
-        conn.executemany(
+        _append_sqlite_rows(
+            path,
+            _VIDEO_METADATA_TABLE,
             "INSERT OR REPLACE INTO video_metadata VALUES (?,?,?,?,?,?,?,?,?)",
             data,
         )
-        conn.commit()
-        conn.close()
         return
 
     existing = load_video_metadata(path)
     existing.extend(records)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump([asdict(r) for r in existing], fh, ensure_ascii=False, indent=2)
+    _write_json_atomically(path, [r.to_dict() for r in existing])
 
 
 # ---------------------------------------------------------------------------
@@ -140,15 +178,7 @@ def load_short_mappings(filename: str | Path) -> List[ShortMapping]:
     path = Path(filename)
     if _is_sqlite(path):
         conn = sqlite3.connect(path)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS short_mappings (
-                short_video_id TEXT PRIMARY KEY,
-                full_video_id TEXT,
-                relation_source TEXT
-            )
-            """
-        )
+        conn.execute(_SHORT_MAPPINGS_TABLE)
         rows = conn.execute(
             "SELECT short_video_id, full_video_id, relation_source FROM short_mappings"
         ).fetchall()
@@ -174,31 +204,20 @@ def append_short_mappings(records: Iterable[ShortMapping], filename: str | Path)
     """Append ``records`` to the short mapping collection at ``filename``."""
     path = Path(filename)
     if _is_sqlite(path):
-        conn = sqlite3.connect(path)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS short_mappings (
-                short_video_id TEXT PRIMARY KEY,
-                full_video_id TEXT,
-                relation_source TEXT
-            )
-            """
-        )
         data = [
             (r.short_video_id, r.full_video_id, r.relation_source) for r in records
         ]
-        conn.executemany(
+        _append_sqlite_rows(
+            path,
+            _SHORT_MAPPINGS_TABLE,
             "INSERT OR REPLACE INTO short_mappings VALUES (?,?,?)",
             data,
         )
-        conn.commit()
-        conn.close()
         return
 
     existing = load_short_mappings(path)
     existing.extend(records)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump([asdict(r) for r in existing], fh, ensure_ascii=False, indent=2)
+    _write_json_atomically(path, [r.to_dict() for r in existing])
 
 
 # ---------------------------------------------------------------------------
@@ -211,8 +230,7 @@ logger = logging.getLogger(__name__)
 def save_results(data: Any, filename: str = "results.json") -> None:
     """Persist data to a JSON file."""
     logger.info("Saving results to %s", filename)
-    with open(filename, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, ensure_ascii=False, indent=2)
+    _write_json_atomically(filename, data)
 
 
 # File used to persist last run timestamps per channel
