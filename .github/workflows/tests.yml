@@ -10,7 +10,7 @@ on:
     types: [opened, synchronize, reopened, labeled]
 
 concurrency:
-  group: ${{ (github.event_name != 'schedule' || vars.HETZNER_RUNNER == 'true') && (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'promote') && (github.event.action != 'labeled' || github.event.label.name == 'promote') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main')) && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, github.run_id) || format('{0}-pr-skip-{1}', github.workflow, github.ref) }}
+  group: ${{ (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'promote') && (github.event.action != 'labeled' || github.event.label.name == 'promote') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main')) && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, github.run_id) || format('{0}-pr-skip-{1}', github.workflow, github.ref) }}
   cancel-in-progress: false
 
 permissions:
@@ -18,8 +18,8 @@ permissions:
 
 jobs:
   test:
-    if: ${{ (github.event_name != 'schedule' || vars.HETZNER_RUNNER == 'true') && (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'promote') && (github.event.action != 'labeled' || github.event.label.name == 'promote') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main')) }}
-    runs-on: [self-hosted, hetzner]
+    if: ${{ (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'promote') && (github.event.action != 'labeled' || github.event.label.name == 'promote') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main')) }}
+    runs-on: ubuntu-24.04
     env:
       PIP_NO_CACHE_DIR: '1'
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
